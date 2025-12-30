@@ -57,6 +57,8 @@ export default function ChatRoom({
 		id: null,
 		percent: 0,
 	});
+	const [isLoadingMore, setIsLoadingMore] = useState(false);
+	const [hasMore, setHasMore] = useState(true);
 
 	const [isShowChatRoomInfo, setIsShowChatRoomInfo] = useState<boolean>(false);
 
@@ -78,6 +80,7 @@ export default function ChatRoom({
 	}, []);
 
 	useEffect(() => {
+		// auto scroll to bottom when new message arrives at end (most common case)
 		scrollToBottom();
 	}, [messages.length, roomId]);
 
@@ -200,25 +203,44 @@ export default function ChatRoom({
 					if (
 						scrollToBottomButton.current &&
 						messageContainerRef.current &&
-						div instanceof HTMLElement &&
-						div.scrollHeight - div.scrollTop > div.clientHeight + 100
+						div instanceof HTMLElement
 					) {
-						scrollToBottomButton.current.style.display = 'block';
-						console.log('scroll top: ', div.scrollTop);
-						console.log(
-							'messageContainerRef: ',
-							messageContainerRef.current.scrollHeight,
-						);
-
-						if (div.scrollTop <= 0) {
-							messagePage.current += 1;
-							handleFetchNewMessages(messagePage.current);
+						const distanceFromBottom = div.scrollHeight - div.scrollTop - div.clientHeight;
+						// show the "scroll to bottom" button when user is away from bottom
+						if (distanceFromBottom > 100) {
+							scrollToBottomButton.current.style.display = 'block';
+						} else {
+							scrollToBottomButton.current.style.display = 'none';
 						}
-					} else if (scrollToBottomButton.current) {
-						scrollToBottomButton.current.style.display = 'none';
+
+						// when scrolled to (near) top, fetch older messages
+						if (div.scrollTop <= 10 && !isLoadingMore && hasMore) {
+							setIsLoadingMore(true);
+							const prevHeight = div.scrollHeight;
+							messagePage.current += 1;
+							// fetch page and get returned data
+							handleFetchNewMessages(messagePage.current).then((data) => {
+								if (!data || (Array.isArray(data) && data.length === 0)) {
+									setHasMore(false);
+								}
+								// after messages prepended, keep scroll position stable
+								setTimeout(() => {
+									const newHeight = div.scrollHeight;
+									div.scrollTop = newHeight - prevHeight + div.scrollTop;
+									setIsLoadingMore(false);
+								}, 50);
+							}).catch(() => {
+								setIsLoadingMore(false);
+							});
+						}
 					}
 				}}
 			>
+				{isLoadingMore && (
+					<div className="flex w-full justify-center py-2">
+						<div className="h-6 w-6 animate-spin rounded-full border-4 border-gray-400 border-t-indigo-500" />
+					</div>
+				)}
 				<div className="mx-auto mt-[10%] flex h-auto w-[50%] flex-col items-center justify-center gap-y-[5px] rounded-[8px] bg-slate-800 px-[10px] py-[5px] md:w-[350px]">
 					<img
 						src="./bg_image_2.jpeg"
@@ -252,28 +274,28 @@ export default function ChatRoom({
 
 				{isLoading === messagePage.current && isLoading === 1
 					? Array.from({ length: 5 }, (_, idx) => (
-							<div
-								key={idx}
-								className={`flex w-full animate-pulse ${idx % 2 === 0 ? 'justify-end' : 'justify-start'}`}
-							>
-								<div className="group relative w-[200px] max-w-[80%] rounded-lg bg-gray-800 p-[8px] text-gray-100">
-									<div className="mb-2 h-[20px] w-[80%] bg-gray-700"></div>
-									<div className="mb-1 h-[15px] w-[60%] bg-gray-700"></div>
-									<div className="h-[10px] w-[40%] bg-gray-700"></div>
-								</div>
+						<div
+							key={idx}
+							className={`flex w-full animate-pulse ${idx % 2 === 0 ? 'justify-end' : 'justify-start'}`}
+						>
+							<div className="group relative w-[200px] max-w-[80%] rounded-lg bg-gray-800 p-[8px] text-gray-100">
+								<div className="mb-2 h-[20px] w-[80%] bg-gray-700"></div>
+								<div className="mb-1 h-[15px] w-[60%] bg-gray-700"></div>
+								<div className="h-[10px] w-[40%] bg-gray-700"></div>
 							</div>
-						))
+						</div>
+					))
 					: messages.map((msg, idx) => (
-							<Message
-								key={msg.id}
-								index={idx}
-								message={msg}
-								totalMessages={messages.length}
-								uploadProgress={uploadProgress}
-								updateMessage={updateMessage}
-								deleteMessage={deleteMessage}
-							/>
-						))}
+						<Message
+							key={msg.id}
+							index={idx}
+							message={msg}
+							totalMessages={messages.length}
+							uploadProgress={uploadProgress}
+							updateMessage={updateMessage}
+							deleteMessage={deleteMessage}
+						/>
+					))}
 
 				<div ref={messagesEndRef} />
 			</div>

@@ -79,10 +79,13 @@ export default function useMessages(roomId: number | null) {
 	}
 
 	async function handleFetchNewMessages(page: number) {
-		// setIsLoading(page)
+		// fetch messages for page and prepend to existing list
 		const data = await getChatRoomMessage(page);
+		if (!data || (Array.isArray(data) && data.length === 0)) {
+			return data;
+		}
 		setMessages((prev) => [...data, ...prev]);
-		// setIsLoading(false)
+		return data;
 	}
 
 	return {

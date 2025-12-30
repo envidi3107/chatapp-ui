@@ -54,7 +54,7 @@ const formatDate = (dateString: string) => {
 		(now.getTime() - date.getTime()) / (1000 * 60 * 60),
 	);
 
-	if (diffInHours < 1) {
+	if (diffInHours < 1 / 60) {
 		return 'Vừa xong';
 	} else if (diffInHours < 24) {
 		return `${diffInHours} giờ trước`;

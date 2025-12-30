@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import debounce from 'debounce';
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import { useRequest } from '@/hooks/useRequest';
@@ -9,6 +10,8 @@ import { FaPaperPlane, FaMicrophone, FaStopCircle } from 'react-icons/fa';
 import { useNotification } from '@/hooks/useNotification';
 import TextInput from './TextInput';
 import { useAuth } from '@/contexts/AuthContext';
+import useTypingEvent from '@/hooks/useTypingEvent';
+import Avatar from './Avatar';
 
 declare global {
 	interface Window {
@@ -18,7 +21,7 @@ declare global {
 }
 
 declare const SpeechRecognition: {
-	new (): typeof SpeechRecognition;
+	new(): typeof SpeechRecognition;
 	prototype: typeof SpeechRecognition;
 };
 
@@ -58,6 +61,27 @@ export default function ChatInput({
 	const [message, setMessage] = useState('');
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 	const messageInputRef = useRef<HTMLInputElement>(null);
+	const isTypingRef = useRef<boolean>(false);
+	const debouncedStopRef = useRef<ReturnType<typeof debounce> | null>(null);
+
+	useEffect(() => {
+		// initialize debounced stop-typing function
+		debouncedStopRef.current = debounce(() => {
+			if (isTypingRef.current) {
+				sendTypingEvent(false);
+				isTypingRef.current = false;
+			}
+		}, 1200);
+
+		return () => {
+			// clear pending debounce and notify server that typing stopped
+			debouncedStopRef.current?.clear?.();
+			if (isTypingRef.current) {
+				sendTypingEvent(false);
+				isTypingRef.current = false;
+			}
+		};
+	}, []);
 	const [attachments, setAttachments] = useState<FileAttachmentTypes[] | null>(
 		null,
 	);
@@ -69,6 +93,9 @@ export default function ChatInput({
 	const [isRecording, setIsRecording] = useState(false);
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 	const audioChunksRef = useRef<Blob[]>([]);
+
+	const userTyping = useTypingEvent(roomId || 0, authUser?.id || 0);
+	console.log('user typing:', userTyping);
 
 	const sendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -88,6 +115,8 @@ export default function ChatInput({
 		if (text) {
 			formData.append('message', text);
 		}
+
+		sendTypingEvent(false);
 
 		templeAttachments.current = attachments;
 		const fakeId = -Date.now();
@@ -117,15 +146,15 @@ export default function ChatInput({
 				},
 				onUploadProgress: templeAttachments.current
 					? (progressEvent) => {
-							const percent = Math.round(
-								(progressEvent.loaded * 100) / (progressEvent.total || 1),
-							);
-							onSetUploadProgress({
-								id: fakeId,
-								percent: percent,
-							});
-						}
-					: () => {},
+						const percent = Math.round(
+							(progressEvent.loaded * 100) / (progressEvent.total || 1),
+						);
+						onSetUploadProgress({
+							id: fakeId,
+							percent: percent,
+						});
+					}
+					: () => { },
 			});
 		} catch (err) {
 			console.error('Send failed:', err);
@@ -135,6 +164,15 @@ export default function ChatInput({
 		setMessage('');
 		setAttachments(null);
 	};
+
+	async function sendTypingEvent(typing: boolean) {
+		await post(`typing`, {
+			roomId: roomId,
+			senderId: authUser?.id,
+			avatar: authUser?.avatar,
+			typing: typing,
+		});
+	}
 
 	const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const files = Array.from(e.target.files || []);
@@ -250,6 +288,19 @@ export default function ChatInput({
 
 	return (
 		<div className="relative flex flex-col gap-[15px] border-t border-gray-800 bg-gray-800/50 p-4">
+			{userTyping && userTyping.typing && (
+				<div className="absolute bottom-[105%] left-[10px] flex items-center gap-[10px] rounded-[10px] bg-gray-700/80 px-[10px] py-[5px]">
+					<img
+						src={userTyping.avatar || '/default-avatar.png'}
+						alt="avatar"
+						className="h-[30px] w-[30px] rounded-[50%] object-cover"
+					/>
+					<p className="text-sm text-white">
+						đang nhập tin nhắn...
+					</p>
+				</div>
+			)}
+
 			<form className="flex gap-2" onSubmit={sendMessage}>
 				<div className="flex items-center justify-center">
 					<input
@@ -273,7 +324,24 @@ export default function ChatInput({
 						externalRef={messageInputRef}
 						name="message"
 						value={message}
-						onChange={(e) => setMessage(e.target.value)}
+						onChange={(e) => {
+							const v = e.target.value;
+							setMessage(v);
+							if (v.length === 0) {
+								if (isTypingRef.current) {
+									sendTypingEvent(false);
+									isTypingRef.current = false;
+								}
+								debouncedStopRef.current?.clear?.();
+							} else {
+								if (!isTypingRef.current) {
+									sendTypingEvent(true);
+									isTypingRef.current = true;
+								}
+								// schedule stop-typing after idle
+								debouncedStopRef.current?.();
+							}
+						}}
 						placeHolder="Type a message..."
 						className="h-full w-full"
 					/>
@@ -422,8 +490,8 @@ export default function ChatInput({
 								style={
 									voiceMenu === value
 										? {
-												backgroundColor: 'blue',
-											}
+											backgroundColor: 'blue',
+										}
 										: {}
 								}
 								onClick={() => setVoiceMenu(value)}
