@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import debounce from 'debounce';
-import Picker from '@emoji-mart/react';
-import data from '@emoji-mart/data';
+import Picker from 'emoji-picker-react';
 import { useRequest } from '@/hooks/useRequest';
 import { MessageResponseType } from '@/types/Message';
 import { MdAttachFile, MdDeleteForever } from 'react-icons/md';
@@ -21,7 +20,7 @@ declare global {
 }
 
 declare const SpeechRecognition: {
-	new(): typeof SpeechRecognition;
+	new (): typeof SpeechRecognition;
 	prototype: typeof SpeechRecognition;
 };
 
@@ -146,15 +145,15 @@ export default function ChatInput({
 				},
 				onUploadProgress: templeAttachments.current
 					? (progressEvent) => {
-						const percent = Math.round(
-							(progressEvent.loaded * 100) / (progressEvent.total || 1),
-						);
-						onSetUploadProgress({
-							id: fakeId,
-							percent: percent,
-						});
-					}
-					: () => { },
+							const percent = Math.round(
+								(progressEvent.loaded * 100) / (progressEvent.total || 1),
+							);
+							onSetUploadProgress({
+								id: fakeId,
+								percent: percent,
+							});
+						}
+					: () => {},
 			});
 		} catch (err) {
 			console.error('Send failed:', err);
@@ -295,9 +294,7 @@ export default function ChatInput({
 						alt="avatar"
 						className="h-[30px] w-[30px] rounded-[50%] object-cover"
 					/>
-					<p className="text-sm text-white">
-						đang nhập tin nhắn...
-					</p>
+					<p className="text-sm text-white">đang nhập tin nhắn...</p>
 				</div>
 			)}
 
@@ -355,7 +352,7 @@ export default function ChatInput({
 
 						{showEmojiPicker && (
 							<div className="absolute right-0 bottom-[100%] z-10 cursor-pointer">
-								<Picker data={data} onEmojiSelect={addEmoji} />
+								<Picker onEmojiClick={(e) => addEmoji({ native: e.emoji })} />
 							</div>
 						)}
 					</div>
@@ -490,8 +487,8 @@ export default function ChatInput({
 								style={
 									voiceMenu === value
 										? {
-											backgroundColor: 'blue',
-										}
+												backgroundColor: 'blue',
+											}
 										: {}
 								}
 								onClick={() => setVoiceMenu(value)}

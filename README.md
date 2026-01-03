@@ -4,7 +4,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 First, run the development server:
 
-```bash
+````bash
 npm run dev
 # or
 # NextChat — Ứng dụng Chat & Mạng Xã Hội (Frontend)
@@ -46,9 +46,10 @@ NextChat là giao diện người dùng (frontend) được xây dựng bằng N
 ```bash
 pnpm install
 # hoặc npm install
-```
+````
 
 2. Thiết lập biến môi trường (ví dụ `.env.local`):
+
 - `NEXT_PUBLIC_WS_BROKERURL` — URL broker cho SockJS/STOMP
 - Các biến cho API backend (ví dụ `NEXT_PUBLIC_API_URL`), và config Agora nếu cần.
 
@@ -60,6 +61,7 @@ pnpm dev
 ```
 
 **Ghi chú cho phát triển**
+
 - Backend API endpoints không có trong repo frontend; kiểm tra hooks `useRequest` để biết các route được gọi.
 - WebSocket sử dụng STOMP + SockJS: broker URL phải đúng server hỗ trợ STOMP.
 - JWT handling: `AuthContext` dùng `jose.decodeJwt` và lưu token vào `localStorage`.
