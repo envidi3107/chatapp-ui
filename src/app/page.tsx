@@ -311,7 +311,6 @@ export default function Page() {
 							<div className="relative rounded-2xl bg-white/5 backdrop-blur-md">
 								<ProjectionBox />
 							</div>
-							<Button />
 						</div>
 					</motion.div>
 				</main>

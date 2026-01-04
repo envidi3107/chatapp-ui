@@ -5,13 +5,14 @@ const nextConfig: NextConfig = {
 	images: {
 		unoptimized: true,
 	},
-	webpack: (config) => {
-		config.optimization.minimizer = [
-			new TerserPlugin({
-				exclude: 'src/components/VideoCall.tsx',
-			}),
-		];
-
+	webpack: (config, { dev }) => {
+		if (!dev) {
+			config.optimization.minimizer.push(
+				new TerserPlugin({
+					exclude: /VideoCall\.tsx$/,
+				}),
+			);
+		}
 		return config;
 	},
 };

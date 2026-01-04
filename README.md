@@ -29,7 +29,7 @@ NextChat là giao diện người dùng (frontend) được xây dựng bằng N
 - `src/utils/` — các tiện ích: xử lý JWT (`jwts.ts`), format thời gian (`formatDateTime.ts`), helper request
 - `src/styles/` — CSS tuỳ chỉnh (animations, breakpoints)
 
-**Các tính năng nổi bật (theo mã nguồn)**
+**Các tính năng nổi bật**
 - Trang landing giới thiệu tính năng (tham chiếu `src/app/page.tsx`)
 - Xác thực JWT: `AuthContext` kiểm tra access/refresh token, refresh khi cần, lưu token vào `localStorage`.
 - Chat thời gian thực: `WebSocketContext` + STOMP client tạo kết nối, `useWebSocket` dùng để subscribe message topics.
